@@ -72,7 +72,7 @@
 #
 #   Note: Leave a leading space when adding list items with the += operator
 ################################################################################
-# PROJECT_EXCLUSIONS =
+PROJECT_EXCLUSIONS =$(PROJECT_ROOT)/addons/ofxOMXPlayer/libs/ffmpeg/include%
 
 ################################################################################
 # PROJECT LINKER FLAGS
@@ -92,7 +92,21 @@ WIRINGPI_DIR = $(PROJECT_ROOT)/addons/ofxWiringPi/lib/wiringPi
 WIRING_PI_LIB_DIR = $(WIRINGPI_DIR)/libs
 WIRING_PI_LIB = $(WIRING_PI_LIB_DIR)/libwiringPi.a
 
+FFMPEG_LIBS = $(PROJECT_ROOT)/addons/ofxOMXPlayer/libs/ffmpeg/libs
+FORMAT_STATIC=$(FFMPEG_LIBS)/libavformat.a
+CODEC_STATIC=$(FFMPEG_LIBS)/libavcodec.a
+SCALE_STATIC=$(FFMPEG_LIBS)/libswscale.a
+UTIL_STATIC=$(FFMPEG_LIBS)/libavutil.a
+
+#unused but available
+FILTER_STATIC=$(FFMPEG_LIBS)/libavfilter.a
+POSTPROC_STATIC=$(FFMPEG_LIBS)/libpostproc.a
+DEVICE_STATIC=$(FFMPEG_LIBS)/libavdevice.a
+RESAMPLE_STATIC=$(FFMPEG_LIBS)/libswresample.a
+
+
 PROJECT_LDFLAGS=-Wl,-rpath=./libs -L$(WIRING_PI_LIB_DIR) $(WIRING_PI_LIB)
+PROJECT_LDFLAGS+= -L$(FFMPEG_LIBS) $(FORMAT_STATIC) $(CODEC_STATIC) $(SCALE_STATIC) $(UTIL_STATIC) $(RESAMPLE_STATIC) $(FILTER_STATIC) -lm
 
 ################################################################################
 # PROJECT DEFINES
@@ -104,6 +118,16 @@ PROJECT_LDFLAGS=-Wl,-rpath=./libs -L$(WIRING_PI_LIB_DIR) $(WIRING_PI_LIB)
 #   Note: Leave a leading space when adding list items with the += operator
 ################################################################################
 # PROJECT_DEFINES = 
+PROJECT_DEFINES += __STDC_CONSTANT_MACROS 
+PROJECT_DEFINES += __STDC_LIMIT_MACROS 
+PROJECT_DEFINES += TARGET_POSIX 
+PROJECT_DEFINES += _LINUX
+#http://en.wikipedia.org/wiki/Position-independent_code 
+PROJECT_DEFINES += PIC 
+#Defining _REENTRANT causes the compiler to use thread safe (i.e. re-entrant) versions of several functions in the C library.
+PROJECT_DEFINES += _REENTRANT 
+PROJECT_DEFINES += OMX 
+PROJECT_DEFINES += OMX_SKIP64BIT 
 
 ################################################################################
 # PROJECT CFLAGS
@@ -122,6 +146,7 @@ PROJECT_LDFLAGS=-Wl,-rpath=./libs -L$(WIRING_PI_LIB_DIR) $(WIRING_PI_LIB)
 ################################################################################
 WIRING_PI_INCLUDE_DIR = $(WIRINGPI_DIR)/include
 PROJECT_CFLAGS = -I$(WIRING_PI_INCLUDE_DIR)
+PROJECT_CFLAGS += -I$(PROJECT_ROOT)/addons/ofxOMXPlayer/libs/ffmpeg/include -fPIC -U_FORTIFY_SOURCE -Wall -ftree-vectorize -ftree-vectorize
 
 ################################################################################
 # PROJECT OPTIMIZATION CFLAGS
