@@ -1,5 +1,10 @@
 #include "testApp.h"
 
+void testApp::onEndOfStream(ofEventArgs& args)
+{
+	ofLogVerbose() << "onEOS";
+	doProcessPixels = !doProcessPixels;
+}
 
 //--------------------------------------------------------------
 void testApp::setup()
@@ -7,31 +12,41 @@ void testApp::setup()
 	
 
 	//construct new PCA9685 object with the number of boards you're using
-	numBoards = 2;
+	numBoards = 1;
 	pca = new PCA9685(numBoards);
 
 	
-    ofSetVerticalSync(false);
-	cameraWidth		= 320;
-	cameraHeight	= 240;
-	cellSize = 48;
-	cellSizeFl  = (float)cellSize;
-	numPixels = (cameraWidth/cellSize) * (cameraHeight/cellSize);
-    ofLog() << "numPixels: " << numPixels;
-
-	displayCoeff = 1;
+    //We want to receive an event when gstreamer reaches the end of stream
+	//so we need to get access to some internals to attach as a listener
 	
-	videoGrabber.listDevices();
-	videoGrabber.setDesiredFrameRate(60); 
-	videoGrabber.initGrabber(cameraWidth, cameraHeight);
-	pixels = new unsigned char[numPixels];
-
-    noiseSpeedX = 0.01;
-    noiseSpeedY = 0.01;
-    noiseAmp = 2000;
-    
-    time = 0;
-    timeInc = 0.1;
+	//Create a pointer to a new ofGstVideoPlayer
+	gstVideoPlayer = new ofGstVideoPlayer();
+	
+	//Create a smart pointer that ofVideoPlayer requires 
+	ofPtr<ofBaseVideoPlayer> baseVideoPlayer = ofPtr<ofBaseVideoPlayer>(gstVideoPlayer);
+	
+	//ofGstVideoUtils is what dispatches the events - get a reference
+	gstVideoUtils = gstVideoPlayer->getGstVideoUtils();
+	
+	//We add our listener
+	ofAddListener(gstVideoUtils->eosEvent, this, &testApp::onEndOfStream);
+	
+	//If you were creating multiple players you would want to do this at cleanup
+	//We are only using one player so we are okay
+	//ofRemoveListener(gstVideoUtils->eosEvent, &ofApp::onEndOfStream);
+	
+	videoPlayer.setPlayer(baseVideoPlayer);
+	
+	
+	// Uncomment this to show movies with alpha channels
+	// videoPlayer.setPixelFormat(OF_PIXELS_RGBA);
+	
+	
+	videoPlayer.loadMovie("Harold.mov");
+	videoPlayer.setLoopState(OF_LOOP_NORMAL); //must set this after loadMovie on the RPI
+	videoWidth = videoPlayer.getWidth();
+	videoHeight = videoPlayer.getHeight();
+	videoPlayer.play();
 
 	//on start-up, run through light test
 	testLights();
@@ -44,29 +59,10 @@ void testApp::update()
 {
 	
 //////////////////Prod Section //////////////////
-	videoGrabber.update();
+	videoPlayer.update();
 
 	
-	if(videoGrabber.isFrameNew())                            //if a new frame is available do this:
-    {
-        ofPixels pix = videoGrabber.getPixelsRef(); 
-        pix.mirror(false, true); 
-
-        for(int j = 0; j < cameraHeight/cellSize; j++)
-        {
-        	for (int i = 0; i < cameraWidth/cellSize; i++)
-			{
-				int x = i*cellSize;
-				int y = j*cellSize;
-				br[(j*(cameraWidth/cellSize))+i] = (float)pix.getColor(x,y).getLightness();
-				br[(j*(cameraWidth/cellSize))+i] = ofMap(br[(j*(cameraWidth/cellSize))+i], 0, 255, 0, 2000);
-			}
-        }
-    }
-
-    makeNoise();
-    runLights(br);
-    ofLog() << ofGetFrameRate() ;  
+	
 }
 
 
@@ -82,17 +78,6 @@ void testApp::makeNoise(void)
 }
 
 
-/////////////////// STEVEN'S LAW /////////////////////////////////
-float testApp::stevensLaw(float val)
-{
-    float newVal;
-    if(val <= 255)
-    {
-       newVal = pow(255.0 * ((float)val/(float)255), 1.0/0.5) + 0.5;
-    }
-    
-    return newVal;
-}
 
 ////////////////////// RUN LIGHTS //////////////////////////////////
 void testApp::runLights(float br[])
@@ -117,47 +102,19 @@ void testApp::runLights(float br[])
 
 //--------------------------------------------------------------
 void testApp::draw(){
+	videoPlayer.draw(0, 0);
+
+	ofPushStyle();
+		ofSetColor(ofColor::white);
+		stringstream info;
+		info << "App FPS: "		<< ofGetFrameRate()															<< "\n";
+		info << "Frame: "		<< videoPlayer.getCurrentFrame() << "/" << videoPlayer.getTotalNumFrames()	<< "\n";
+		info << "Duration: "	<< videoPlayer.getDuration()												<< "\n";
+		info << "Speed: "		<< videoPlayer.getSpeed()													<< "\n";
+		info << "Width: "		<< videoWidth << " / Height: " 	<< videoHeight << "\n";
+		ofDrawBitmapString(info.str(), 100, 100);
+	ofPopStyle();
 	
-	/*
-	int leftSpace = 100;
-	int space = 200-cellSize;
-	int height = 230;
-
-	ofBackground(10, 10, 10);
-
-	ofSetColor(255);
-	videoGrabber.draw(leftSpace, height, cameraWidth*displayCoeff, cameraHeight*displayCoeff);
-	ofDrawBitmapString("Source", leftSpace, height-20);
-
-
-			
-	
-		//ofTranslate(cameraWidth+100,100);
-		//pixelTexture.draw(0,0);
-	
-	ofDrawBitmapString("Pixelated and Mirrored", cameraWidth*displayCoeff+leftSpace+space+cellSize, height - 20);
-
-	for(int j = 0; j < (cameraHeight/cellSize); j++)
-		{
-			for(int i = 0; i < (cameraWidth/cellSize); i++)
-			{
-				ofPushMatrix();
-				ofTranslate(space,0);
-				ofTranslate(i*cellSize*displayCoeff+cameraWidth*displayCoeff+space, j*cellSize*displayCoeff+height);
-				//ofSetColor(stevensLaw(br[j*(cameraWidth/cellSize)+i]));
-                //ofSetColor((noiseVal[j*(cameraWidth/cellSize)+i]) + ofMap(br[j*(cameraWidth/cellSize)+i], 0, 255, 0, 125));
-					ofRect(0.0,0.0,cellSizeFl*displayCoeff, cellSizeFl*displayCoeff);
-                    ofSetColor(255,0,0);
-                    ofDrawBitmapString(ofToString(j*(cameraWidth/cellSize)+i), 0,10);
-				ofPopMatrix();
-			}
-		}
-	//ofPopMatrix();
-	
-
-	ofSetColor(255);
-	ofDrawBitmapString("FPS: " + ofToString(ofGetFrameRate(), 0), 5, ofGetWindowHeight()-5);
-    */
 }
 
 
