@@ -13,35 +13,19 @@ public:
 	void setup();
 	void update();
 	void draw();
-	void runLights(float br[]);
-    void makeNoise(void);
-    float stevensLaw(float val);
-    
-    void testLights(void);
-    void onEndOfStream(ofEventArgs& args);
-
-	int val;
-	int valInc;
+    void exit();
 
 
-	float br[30];
-    float noiseVal[30];
-	unsigned char* pixels;
-	int cellSize;
-	float cellSizeFl;
-	int numPixels;
-	int	cameraWidth;
-	int	cameraHeight;
-	float displayCoeff;
-    float noiseSpeedX, noiseSpeedY, noiseAmp, time, timeInc;
-	int numBoards;
+	//void runLights(float br[]);
 
-	ofVideoPlayer 		videoPlayer;
-	ofGstVideoPlayer*	gstVideoPlayer;
-	ofGstVideoUtils*	gstVideoUtils;
-	int videoWidth;
-	int videoHeight;
-	bool doProcessPixels;
+    ofxOMXPlayer omxPlayer;
+
+    int numBoards;
+    int counter;
+    bool show;
+
+
+	
 
 
 	PCA9685* pca; //initialize the class with number of boards
