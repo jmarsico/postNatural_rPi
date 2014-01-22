@@ -1,33 +1,48 @@
 #pragma once
 
 #include "ofMain.h"
-#include "PCA9685.h"
 #include "ofxOMXPlayer.h"
-
- // set to -1 to not use the enable pin (its optional)
-
-class testApp : public ofBaseApp{
-
-public:
-
-	void setup();
-	void update();
-	void draw();
-    void exit();
+#include "ConsoleListener.h"
+#include "PCA9685.h"
 
 
-	//void runLights(float br[]);
-
-    ofxOMXPlayer omxPlayer;
-
-    int numBoards;
-    int counter;
-    bool show;
-
-
+class testApp : public ofBaseApp, public SSHKeyListener, public ofxOMXPlayerListener{
+	public:
+		void setup();
+		void update();
+		void draw();
+		
+		void keyPressed(int key);
+		void keyReleased(int key);
+		void mouseMoved(int x, int y);
+		void mouseDragged(int x, int y, int button);
+		void mousePressed(int x, int y, int button);
+		void mouseReleased(int x, int y, int button);
+		void windowResized(int w, int h);
+		void dragEvent(ofDragInfo dragInfo);
+		void gotMessage(ofMessage msg);
 	
+	ofxOMXPlayerSettings settings;
+	ofxOMXPlayer omxPlayer;
+	
+	//allows key commands via Shell
+	void onCharacterReceived(SSHKeyListenerEventData& e);
+	ConsoleListener consoleListener;
+	
+	//ofxOMXPlayerListener inheritance
+	void onVideoEnd(ofxOMXPlayerListenerEventData& e);
+	void onVideoLoop(ofxOMXPlayerListenerEventData& e);
+	
+	vector<ofFile> files;
+	int videoCounter;
+	
+	bool doDrawInfo;
 
+	int numBoards;
+	PCA9685* pca;
 
-	PCA9685* pca; //initialize the class with number of boards
+	int currentFrame;
+	int totalFrames;
+
 	
 };

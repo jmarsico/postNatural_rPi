@@ -1,135 +1,268 @@
 #include "testApp.h"
 
 
+void testApp::onVideoEnd(ofxOMXPlayerListenerEventData& e)
+{
+	ofLogVerbose(__func__) << " RECEIVED";
+	
+
+
+	if (files.size() ==0) 
+	{
+		//We have only the one file so it will just loop
+		return;
+	}
+	if(videoCounter+1<files.size())
+	{
+		videoCounter++;
+	}else
+	{
+		videoCounter = 0;
+	}
+	omxPlayer.loadMovie(files[videoCounter].path());
+
+
+}
+
+//--------------------------------------------------------------
+void testApp::onVideoLoop(ofxOMXPlayerListenerEventData& e)
+{
+	ofLogVerbose(__func__) << " RECEIVED";
+	omxPlayer.setPaused(true);
+
+}
+
+
 //--------------------------------------------------------------
 void testApp::setup()
 {
-	
-
-	//construct new PCA9685 object with the number of boards you're using
 	numBoards = 1;
 	pca = new PCA9685(numBoards);
-	//on start-up, run through light test
-	counter = 0;
-	show = true;
 
-
+	consoleListener.setup(this);
+	ofHideCursor();
+	videoCounter = 0;
+	
 	string videoPath = ofToDataPath("noise_box_video.mp4", true);
-
-	//this will let us just grab a video without recompiling
+	
 	/*
-	ofDirectory currentVideoDirectory("/home/pi/videos/current");
+	//this will let us just grab a video without recompiling
+	ofDirectory currentVideoDirectory(ofToDataPath("../../../videos/current", true));
+	bool doRandomSelect		= true;
 	if (currentVideoDirectory.exists()) 
 	{
+		//option to put multiple videos in folder to test
 		currentVideoDirectory.listDir();
-		vector<ofFile> files = currentVideoDirectory.getFiles();
+		files = currentVideoDirectory.getFiles();
 		if (files.size()>0) 
 		{
-			videoPath = files[0].path();
+			if (doRandomSelect && files.size()>1) {
+				videoPath = files[ofRandom(files.size())].path();
+			}else 
+			{
+				videoPath = files[0].path();
+			}
 		}		
 	}
 	*/
 	
-	//Somewhat like ofFboSettings we may have a lot of options so this is the current model
-	/*
-	ofxOMXPlayerSettings settings;
+	ofLogVerbose() << "using videoPath : " << videoPath;
 	settings.videoPath = videoPath;
-	settings.useHDMIForAudio = true;	//default true
-	settings.enableTexture = false;		//default true
-	settings.enableLooping = true;		//default true
-	settings.enableAudio = true;		//default true, save resources by disabling
+	settings.useHDMIForAudio = false;		//default true
 	
-	
-	if (settings.enableTexture)
+	//settings.enableTexture = false;		//default true, uncomment for direct-to-screen mode
+	settings.enableLooping = true;
+	if (files.size()>0)
 	{
-		doShader = false;
-		if (doShader) 
-		{
-			ofEnableAlphaBlending();
-			
-			shader.load("PostProcessing.vert", "PostProcessing.frag", "");
-			
-			fbo.allocate(ofGetWidth(), ofGetHeight());
-			fbo.begin();
-			ofClear(0, 0, 0, 0);
-			fbo.end();
-			
-		}
+		//we don't want to loop if we are switching files
+		settings.enableLooping = false;		//default true
 	}
-	*/
+	settings.enableAudio = true;
+	settings.listener = this; //this app extends ofxOMXPlayerListener so it will receive events ;
+	omxPlayer.setup(settings);
 	
-	//so either pass in the settings
-	//omxPlayer.setup(settings);
 	
-	//or live with the defaults
-	omxPlayer.loadMovie(videoPath);
+	doDrawInfo = true;
 
-}
-
-void testApp::exit()
-{
-	omxPlayer.close();
+	totalFrames = omxPlayer.getTotalNumFrames();
+	
 }
 
 //--------------------------------------------------------------
-void testApp::update()
-{
-	counter ++;
-	ofLog() << "counter: " << counter ;
-    if(counter == 1000)
-    {
-      show = !show;
-      counter = 0;
-    }
-
-    if(show)
-    {
-    	pca->setLED(0, 4095);
-    }
-    else
-    {
-    	pca->setLED(0,4095);
-    }
-		
-
-/*	
-if(omxPlayer.isPlaying() || omxPlayer.isTextureEnabled)
-	{
-		if (doShader) 
-		{
-			updateFbo();
-		}
-	}
-	*/
+void testApp::update(){
+	currentFrame = omxPlayer.getCurrentFrame()%totalFrames;
+	
 }
 
-
 //--------------------------------------------------------------
-void testApp::draw(){
+void testApp::draw()
+{
+	
+	
+
+	
+	if (!settings.enableTexture) return; //direct to screen - nothing else draws so returning
 	omxPlayer.draw(0, 0, ofGetWidth(), ofGetHeight());
 
-	/*
-	for(int i = 0; i<16; i++)
-	{
-		if(show)
-		{
-			pca->setLED(i, 4095);
-		}
-		else
-		{
-			pca->setLED(i, 0);
-		}
-	}
-	*/
-		
-		//draw a smaller version in the lower right
-		//int scaledHeight = omxPlayer.getHeight()/4;
-		//int scaledWidth = omxPlayer.getWidth()/4;
-		//omxPlayer.draw(ofGetWidth()-scaledWidth, ofGetHeight()-scaledHeight, scaledWidth, scaledHeight);
 	
+//---------------------------draw debugging info-----------------------------------
+	if (doDrawInfo) 
+	{
+		stringstream info;
+		info <<"\n" <<  "APP FPS: "+ ofToString(ofGetFrameRate());
+		
+		
+		info <<"\n" <<	"MEDIA TIME: "			<< omxPlayer.getMediaTime();
+		info <<"\n" <<	"OF DIMENSIONS: "		<< ofGetWidth()<<"x"<<ofGetHeight();
+		info <<"\n" <<	"DIMENSIONS: "			<< omxPlayer.getWidth()<<"x"<<omxPlayer.getHeight();
+		info <<"\n" <<	"DURATION: "			<< omxPlayer.getDuration();
+		info <<"\n" <<	"TOTAL FRAMES: "		<< totalFrames;
+		info <<"\n" <<	"CURRENT FRAME: "		<< currentFrame;
+		info <<"\n" <<	"REMAINING FRAMES: "	<< totalFrames - currentFrame;
+		
+		info <<"\n" <<	"CURRENT VOLUME: "		<< omxPlayer.getVolume();
+		
+		info <<"\n" <<	"KEYS:";
+		info <<"\n" <<	"t to Toggle Info Display";
+		info <<"\n" <<	"p to Toggle Pause";
+		info <<"\n" <<	"b to Step frame forward";
+		info <<"\n" <<	"1 to Decrease Volume";
+		info <<"\n" <<	"2 to Increase Volume";
+		ofDrawBitmapStringHighlight(info.str(), 60, 60, ofColor(0, 0, 0, 90), ofColor::yellow);
+	}
+
+	
+
+//------------------LED 0---------------------------------------
+	if(currentFrame > 100 && currentFrame < 400)
+	{
+		pca->setLED(0, (currentFrame-100) * 4);
+	}
+
+	if(currentFrame > (totalFrames - 100) && currentFrame < totalFrames)
+	{
+		pca->setLED(0, 0);
+	}
+
+//------------------LED 1---------------------------------------	
+	if(currentFrame > 550 && currentFrame < 950)
+	{
+		pca->setLED(1, (currentFrame-550) * 4);
+	}
+
+	if(currentFrame > (totalFrames - 100) && currentFrame < totalFrames)
+	{
+		pca->setLED(1, 0);
+	}
+//------------------LED 1---------------------------------------	
+	{
+	if(currentFrame > 600 && currentFrame < 1000)
+	{
+		pca->setLED(2, (currentFrame-600) * 4);
+	}
+
+	if(currentFrame > (totalFrames - 100) && currentFrame < totalFrames)
+	{
+		pca->setLED(2, 0);
+	}}
 }
 
 
 
+//--------------------------------------------------------------
+void testApp::onCharacterReceived(SSHKeyListenerEventData& e)
+{
+	//ConsoleListener* thread = (ConsoleListener*) e.listener;
+	keyPressed((int)e.character);
+}
 
+
+
+//--------------------------------------------------------------
+void testApp::keyPressed(int key){
+	ofLogVerbose() << "key received!";
+	switch (key) 
+	{
+		case 'p':
+		{
+			ofLogVerbose() << "pause: " << !omxPlayer.isPaused();
+			omxPlayer.setPaused(!omxPlayer.isPaused());
+			break;
+			
+		}
+		
+		case '1':
+		{
+			
+			ofLogVerbose() << "decreaseVolume";
+			omxPlayer.decreaseVolume();
+			break;
+		}
+		case '2':
+		{
+			ofLogVerbose() << "increaseVolume";
+			omxPlayer.increaseVolume();
+			break;
+		}
+			
+		case 'b':
+		{
+			ofLogVerbose() << "stepFrameForward";
+			omxPlayer.stepFrameForward();
+			break;
+		}
+		
+
+		case 't':
+		{
+			doDrawInfo = !doDrawInfo;
+			break;
+		}
+		
+		default:
+		{
+			break;
+		}
+	}
+}
+
+//--------------------------------------------------------------
+void testApp::keyReleased(int key){
+
+}
+
+//--------------------------------------------------------------
+void testApp::mouseMoved(int x, int y){
+
+}
+
+//--------------------------------------------------------------
+void testApp::mouseDragged(int x, int y, int button){
+
+}
+
+//--------------------------------------------------------------
+void testApp::mousePressed(int x, int y, int button){
+
+}
+
+//--------------------------------------------------------------
+void testApp::mouseReleased(int x, int y, int button){
+
+}
+
+//--------------------------------------------------------------
+void testApp::windowResized(int w, int h){
+
+}
+
+//--------------------------------------------------------------
+void testApp::gotMessage(ofMessage msg){
+
+}
+
+//--------------------------------------------------------------
+void testApp::dragEvent(ofDragInfo dragInfo){ 
+
+}
 
