@@ -56,8 +56,6 @@ void testApp::setup()
 	wiringPiSetup();
 	pinMode(phone[0], INPUT);
 	pullUpDnControl (phone[0], PUD_UP);
-	phoneHang = false;
-	isLifted = false;
 
 	consoleListener.setup(this);
 	ofHideCursor();
@@ -119,38 +117,30 @@ void testApp::update(){
 
 	//----------------state machine for phones / pausing----------------
 	
-	//if any of the phones are off the hook, make isLifted true.
-	//for(int i = 0; i < 3; i++)
-	//{
-		if(phoneState[0]==1)
-		{
-			isLifted = true;
-		}
-	//}
-
-	//while the phone is off the hook, if the video becomes paused (on end of play), set phoneHang to true
-	while(isLifted)				
+	
+	//phoneState 1 = off hook, 0 = on hook
+	
+	//if any of the phones are off the hook, set isOffHook to true
+	if(phoneState[0]==1)
 	{
-		if(omxPlayer.isPaused())
-		{
-			phoneHang = true;
-		}
+		isOffHook = true;
 	}
 
-	//if phone is hanging and someone hangs up all phones, set phoneHang to false
-	if(phoneHang)
+	//if all phones are on the hook, isOffHook is false
+	if(phoneState[0] == 0)
 	{
-		if(phoneState[0]==0)
-		{
-			phoneHang = false;
-		}
+		isOffHook = false;
 	}
 
-	//if the player is paused, and phone is picked up, and phone is not hanging
-	if(omxPlayer.isPaused() && isLifted && !phoneHang)
+	if(omxPlayer.isPaused() && !prevIsOffHook && isOffHook)
 	{
 		omxPlayer.setPaused(false);
 	}
+
+
+	
+	//set previous hook state to current hook state
+	prevIsOffHook = isOffHook;
 
 	
 }
@@ -180,13 +170,13 @@ void testApp::draw()
 		
 		info <<"\n" <<	"CURRENT VOLUME: "		<< omxPlayer.getVolume();
 		info <<"\n" <<  "PIN VALUE: "			<< phoneState[0];
-		if(isLifted)
+		if(isOffHook)
 		{
-			info <<"\n" <<  "PHONE LIFTED"			;
+			info <<"\n" <<  "PHONE OFF HOOK"			;
 		}
-		if(phoneHang)
+		if(!isOffHook)
 		{
-					info <<"\n" <<  "PHONE HANGING"		;
+					info <<"\n" <<  "ALL PHONES ON HOOK"		;
 
 		}
 
@@ -200,6 +190,10 @@ void testApp::draw()
 	}
 
 	
+//--------------------------------------------------------------
+//----------------RAMPING CUES----------------------------------
+//--------------------------------------------------------------
+
 
 //------------------LED 0---------------------------------------
 	if(currentFrame > 100 && currentFrame < 400)
@@ -222,7 +216,7 @@ void testApp::draw()
 	{
 		pca->setLED(1, 0);
 	}
-//------------------LED 1---------------------------------------	
+//------------------LED 2---------------------------------------	
 	{
 	if(currentFrame > 600 && currentFrame < 1000)
 	{
