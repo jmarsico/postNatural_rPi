@@ -52,10 +52,12 @@ void testApp::setup()
 	numBoards = 1;
 	pca = new PCA9685(numBoards);
 	
-	pin = 2;
+	phone[0] = 2;
 	wiringPiSetup();
-	pinMode(pin, INPUT);
-	pullUpDnControl (pin, PUD_UP);
+	pinMode(phone[0], INPUT);
+	pullUpDnControl (phone[0], PUD_UP);
+	phoneHang = false;
+	isLifted = false;
 
 	consoleListener.setup(this);
 	ofHideCursor();
@@ -111,12 +113,41 @@ void testApp::setup()
 void testApp::update(){
 	currentFrame = omxPlayer.getCurrentFrame()%totalFrames;
 	//pullUpDnControl (0, PUD_UP);
-	
-	pinState = digitalRead(pin);
+	phoneState[0] = digitalRead(phone[0]);
 	
 	
 
-	if(omxPlayer.isPaused() && pinState == 1)
+	//----------------state machine for phones / pausing----------------
+	
+	//if any of the phones are off the hook, make isLifted true.
+	//for(int i = 0; i < 3; i++)
+	//{
+		if(phoneState[0]==1)
+		{
+			isLifted = true;
+		}
+	//}
+
+	//while the phone is off the hook, if the video becomes paused (on end of play), set phoneHang to true
+	while(isLifted)				
+	{
+		if(omxPlayer.isPaused())
+		{
+			phoneHang = true;
+		}
+	}
+
+	//if phone is hanging and someone hangs up all phones, set phoneHang to false
+	if(phoneHang)
+	{
+		if(phoneState[0]==0)
+		{
+			phoneHang = false;
+		}
+	}
+
+	//if the player is paused, and phone is picked up, and phone is not hanging
+	if(omxPlayer.isPaused() && isLifted && !phoneHang)
 	{
 		omxPlayer.setPaused(false);
 	}
@@ -148,8 +179,17 @@ void testApp::draw()
 		info <<"\n" <<	"REMAINING FRAMES: "	<< totalFrames - currentFrame;
 		
 		info <<"\n" <<	"CURRENT VOLUME: "		<< omxPlayer.getVolume();
-		info <<"\n" <<  "PIN VALUE: "			<< pinState;
-		
+		info <<"\n" <<  "PIN VALUE: "			<< phoneState[0];
+		if(isLifted)
+		{
+			info <<"\n" <<  "PHONE LIFTED"			;
+		}
+		if(phoneHang)
+		{
+					info <<"\n" <<  "PHONE HANGING"		;
+
+		}
+
 		info <<"\n" <<	"KEYS:";
 		info <<"\n" <<	"t to Toggle Info Display";
 		info <<"\n" <<	"p to Toggle Pause";

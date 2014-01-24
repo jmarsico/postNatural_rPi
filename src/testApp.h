@@ -46,9 +46,10 @@ class testApp : public ofBaseApp, public SSHKeyListener, public ofxOMXPlayerList
 
 	int currentFrame;
 	int totalFrames;
-	bool lifted;
-	int pin;
-	int pinState;
+	bool isLifted;
+	bool phoneHang;
+	int phone[3];
+	int phoneState[3];
 
 
 
