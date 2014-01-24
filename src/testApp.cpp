@@ -1,3 +1,17 @@
+/*
+video is made possible through Jason Van Cleave's ofxOMXPlayer https://github.com/jvcleave/ofxOMXPlayer
+to enable audio from the rPi 3.5mm audio jack try this from the command line:
+$sudo modprobe snd_bcm2835
+$sudo amixer cset numid=3 1
+
+To use HDMI Audio you may need to add the below line to /boot/config.txt and reboot. You'll also need
+to change settings.useHDMIForAudio to true. 
+See http://elinux.org/RPiconfig for more details
+	
+hdmi_drive=2
+*/
+
+
 #include "testApp.h"
 
 
@@ -21,7 +35,6 @@ void testApp::onVideoEnd(ofxOMXPlayerListenerEventData& e)
 	}
 	omxPlayer.loadMovie(files[videoCounter].path());
 
-
 }
 
 //--------------------------------------------------------------
@@ -38,6 +51,11 @@ void testApp::setup()
 {
 	numBoards = 1;
 	pca = new PCA9685(numBoards);
+	
+	pin = 2;
+	wiringPiSetup();
+	pinMode(pin, INPUT);
+	pullUpDnControl (pin, PUD_UP);
 
 	consoleListener.setup(this);
 	ofHideCursor();
@@ -78,10 +96,11 @@ void testApp::setup()
 		settings.enableLooping = false;		//default true
 	}
 	settings.enableAudio = true;
-	settings.listener = this; //this app extends ofxOMXPlayerListener so it will receive events ;
+	settings.listener = this; 				//this app extends ofxOMXPlayerListener so it will receive events
 	omxPlayer.setup(settings);
+
 	
-	
+	//omxPlayer.setPaused(true);
 	doDrawInfo = true;
 
 	totalFrames = omxPlayer.getTotalNumFrames();
@@ -91,16 +110,24 @@ void testApp::setup()
 //--------------------------------------------------------------
 void testApp::update(){
 	currentFrame = omxPlayer.getCurrentFrame()%totalFrames;
+	//pullUpDnControl (0, PUD_UP);
+	
+	pinState = digitalRead(pin);
+	
+	
+
+	if(omxPlayer.isPaused() && pinState == 1)
+	{
+		omxPlayer.setPaused(false);
+	}
+
 	
 }
 
 //--------------------------------------------------------------
 void testApp::draw()
 {
-	
-	
 
-	
 	if (!settings.enableTexture) return; //direct to screen - nothing else draws so returning
 	omxPlayer.draw(0, 0, ofGetWidth(), ofGetHeight());
 
@@ -121,6 +148,7 @@ void testApp::draw()
 		info <<"\n" <<	"REMAINING FRAMES: "	<< totalFrames - currentFrame;
 		
 		info <<"\n" <<	"CURRENT VOLUME: "		<< omxPlayer.getVolume();
+		info <<"\n" <<  "PIN VALUE: "			<< pinState;
 		
 		info <<"\n" <<	"KEYS:";
 		info <<"\n" <<	"t to Toggle Info Display";

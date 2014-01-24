@@ -4,6 +4,8 @@
 #include "ofxOMXPlayer.h"
 #include "ConsoleListener.h"
 #include "PCA9685.h"
+//#include "ofxWiringPi.h"
+
 
 
 class testApp : public ofBaseApp, public SSHKeyListener, public ofxOMXPlayerListener{
@@ -41,8 +43,14 @@ class testApp : public ofBaseApp, public SSHKeyListener, public ofxOMXPlayerList
 	int numBoards;
 	PCA9685* pca;
 
+
 	int currentFrame;
 	int totalFrames;
+	bool lifted;
+	int pin;
+	int pinState;
+
+
 
 	
 };
