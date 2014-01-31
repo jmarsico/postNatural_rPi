@@ -23,6 +23,7 @@ class testApp : public ofBaseApp, public SSHKeyListener, public ofxOMXPlayerList
 		void windowResized(int w, int h);
 		void dragEvent(ofDragInfo dragInfo);
 		void gotMessage(ofMessage msg);
+		void reset();
 	
 	ofxOMXPlayerSettings settings;
 	ofxOMXPlayer omxPlayer;

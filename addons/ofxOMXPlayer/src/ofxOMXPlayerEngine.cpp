@@ -411,7 +411,7 @@ void ofxOMXPlayerEngine::setPaused(bool doPause)
 {
 	ofLogVerbose(__func__) << " doPause: " << doPause;
 	if(doPause)
-	{
+	{	
 		clock.OMXPause();
 	}else 
 	{

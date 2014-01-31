@@ -47,6 +47,19 @@ void testApp::onVideoLoop(ofxOMXPlayerListenerEventData& e)
 
 
 //--------------------------------------------------------------
+void testApp::reset(void)
+{
+	//re-load movie, bounce the pause to get to the first or second frame
+	ofLogVerbose() << "re-load and pause";
+	omxPlayer.loadMovie(ofToDataPath("noise_box_video.mp4", true));
+	omxPlayer.setPaused(true);
+	omxPlayer.setPaused(false);
+	omxPlayer.setPaused(true);
+
+	//drop all lights
+	
+}
+//--------------------------------------------------------------
 void testApp::setup()
 {
 	numBoards = 1;
@@ -61,12 +74,14 @@ void testApp::setup()
 	ofHideCursor();
 	videoCounter = 0;
 	
+	//we can hardcode a different location for the video
 	string videoPath = ofToDataPath("noise_box_video.mp4", true);
 	
-	/*
+	//OR
+
+	//if there is a file in /bin/data, it will choose the first file it sees
 	//this will let us just grab a video without recompiling
-	ofDirectory currentVideoDirectory(ofToDataPath("../../../videos/current", true));
-	bool doRandomSelect		= true;
+	ofDirectory currentVideoDirectory(ofToDataPath("/bin/data", true));
 	if (currentVideoDirectory.exists()) 
 	{
 		//option to put multiple videos in folder to test
@@ -74,15 +89,9 @@ void testApp::setup()
 		files = currentVideoDirectory.getFiles();
 		if (files.size()>0) 
 		{
-			if (doRandomSelect && files.size()>1) {
-				videoPath = files[ofRandom(files.size())].path();
-			}else 
-			{
-				videoPath = files[0].path();
-			}
+			videoPath = files[0].path();
 		}		
 	}
-	*/
 	
 	ofLogVerbose() << "using videoPath : " << videoPath;
 	settings.videoPath = videoPath;
@@ -132,9 +141,16 @@ void testApp::update(){
 		isOffHook = false;
 	}
 
+	//if the video is paused, phone is on hook and then removed, play video
 	if(omxPlayer.isPaused() && !prevIsOffHook && isOffHook)
 	{
 		omxPlayer.setPaused(false);
+	}
+
+	//if video is playing and phones were off hook but are hung up, reset video
+	if(!omxPlayer.isPaused() && prevIsOffHook && !isOffHook)
+	{
+		reset();
 	}
 
 
@@ -278,6 +294,16 @@ void testApp::keyPressed(int key){
 		case 't':
 		{
 			doDrawInfo = !doDrawInfo;
+			break;
+		}
+
+		case 'r':
+		{
+			ofLogVerbose() << "re-load and pause";
+			omxPlayer.loadMovie(ofToDataPath("noise_box_video.mp4", true));
+			omxPlayer.setPaused(true);
+			omxPlayer.setPaused(false);
+			omxPlayer.setPaused(true);
 			break;
 		}
 		
