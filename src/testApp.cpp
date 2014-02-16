@@ -57,13 +57,48 @@ void testApp::reset(void)
 	omxPlayer.setPaused(true);
 
 	//drop all lights
-	
+
 }
 //--------------------------------------------------------------
 void testApp::setup()
 {
 	numBoards = 1;
 	pca = new PCA9685(numBoards);
+
+
+	/////////////// SET UP RAMPS! /////////////////////
+	ramps[0].channel = 0;
+	ramps[0].upFrame = 100;
+	ramps[0].downFrame = 400;
+
+	ramps[1].channel = 1;
+	ramps[1].upFrame = 200;
+	ramps[1].downFrame = 500;
+
+	ramps[2].channel = 2;
+	ramps[2].upFrame = 500;
+	ramps[2].downFrame = 1000;
+
+	ramps[3].channel = 0;
+	ramps[3].upFrame = 600;
+	ramps[3].downFrame = 900;
+
+	ramps[4].channel = 1;
+	ramps[4].upFrame = 700;
+	ramps[4].downFrame = 900;
+
+	for(int i = 0; i < numRamps; i++)
+	{
+		ramps[i].bStartRamping = false;
+	}
+
+
+	//make sure all LED channels are set to zero
+	for(int i = 0; i < 16 * numBoards; i ++)
+	{
+		pca->setLED(i, 0);
+	}
+
 	
 	phone[0] = 2;
 	wiringPiSetup();
@@ -75,10 +110,11 @@ void testApp::setup()
 	videoCounter = 0;
 	
 	//we can hardcode a different location for the video
-	string videoPath = ofToDataPath("noise_box_video.mp4", true);
+	string videoPath = ofToDataPath("Intro_HD720.mp4", true);
+
 	
 	//OR
-
+/*
 	//if there is a file in /bin/data, it will choose the first file it sees
 	//this will let us just grab a video without recompiling
 	ofDirectory currentVideoDirectory(ofToDataPath("/bin/data", true));
@@ -92,7 +128,8 @@ void testApp::setup()
 			videoPath = files[0].path();
 		}		
 	}
-	
+	*/
+
 	ofLogVerbose() << "using videoPath : " << videoPath;
 	settings.videoPath = videoPath;
 	settings.useHDMIForAudio = false;		//default true
@@ -153,8 +190,6 @@ void testApp::update(){
 		reset();
 	}
 
-
-	
 	//set previous hook state to current hook state
 	prevIsOffHook = isOffHook;
 
@@ -206,44 +241,37 @@ void testApp::draw()
 	}
 
 	
-//--------------------------------------------------------------
-//----------------RAMPING CUES----------------------------------
-//--------------------------------------------------------------
 
+	//--------------------------------------------------------------
+	//----------------RAMPING CUES----------------------------------
+	//--------------------------------------------------------------
 
-//------------------LED 0---------------------------------------
-	if(currentFrame > 100 && currentFrame < 400)
+	for(int i = 0; i < numRamps; i++)
 	{
-		pca->setLED(0, (currentFrame-100) * 4);
+		//if the currentFrame is within 5 frames of the upFrame
+		if(currentFrame >=ramps[i].upFrame && currentFrame <= ramps[i].upFrame + (int)4095/fadeInc)
+		{
+			
+			int rampingVal = currentFrame - ramps[i].upFrame;
+			int val = rampingVal*fadeInc;
+
+			if(val > 4095) val = 4095;
+			pca->setLED(ramps[i].channel, val);
+			ofLog() << "channel: " << ramps[i].channel << " value: " << val;
+		}
+
+
+		if(currentFrame >=ramps[i].downFrame && currentFrame <= ramps[i].downFrame + (int)4095/fadeInc)
+		{
+			int rampingVal = currentFrame - ramps[i].downFrame;
+			int val = 4000 - rampingVal*fadeInc;	
+			if(val <= 0) val = 0;
+			pca->setLED(ramps[i].channel, val);
+			ofLog() << "channel: " << ramps[i].channel << " value: " << val;
+		}
 	}
-
-	if(currentFrame > (totalFrames - 100) && currentFrame < totalFrames)
-	{
-		pca->setLED(0, 0);
-	}
-
-//------------------LED 1---------------------------------------	
-	if(currentFrame > 550 && currentFrame < 950)
-	{
-		pca->setLED(1, (currentFrame-550) * 4);
-	}
-
-	if(currentFrame > (totalFrames - 100) && currentFrame < totalFrames)
-	{
-		pca->setLED(1, 0);
-	}
-//------------------LED 2---------------------------------------	
-	{
-	if(currentFrame > 600 && currentFrame < 1000)
-	{
-		pca->setLED(2, (currentFrame-600) * 4);
-	}
-
-	if(currentFrame > (totalFrames - 100) && currentFrame < totalFrames)
-	{
-		pca->setLED(2, 0);
-	}}
 }
+
 
 
 

@@ -53,6 +53,19 @@ class testApp : public ofBaseApp, public SSHKeyListener, public ofxOMXPlayerList
 	bool prevIsOffHook;
 	int phone[3];
 	int phoneState[3];
+	//string videoPath;
+
+	struct Ramp{
+		int channel;
+		int upFrame;
+		int downFrame;
+		bool bStartRamping;
+	};
+
+	//CHANGE THESE VALUES FOR YOUR INSTALL
+	static const int numRamps = 5;
+	static const int fadeInc = 40;
+	Ramp ramps[numRamps];
 
 
 

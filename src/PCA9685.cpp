@@ -11,9 +11,8 @@ PCA9685::PCA9685(int _numBoards)
 	ofLog() << "PCA Initialized with" << numBoards << "boards";
 }
 
-void PCA9685::setLED(int channel, int val)
+void PCA9685::setLED(int channel, int _val)
 {
-	
 	
 	if(channel <=numBoards*16-1)		//check to make sure channel exists
 	{
@@ -23,7 +22,7 @@ void PCA9685::setLED(int channel, int val)
 		unit = floor(channel/16);			//unit is channel/16, rounded down
 		unitChan = channel - unit*16;		//re-interpret channel for this pwm[i]
 		
-		pwm[unit]->setPWM(unitChan, 0, val);	//write to the unit/channel
+		pwm[unit]->setPWM(unitChan, 0, _val);	//write to the unit/channel
 	}
 }
 
