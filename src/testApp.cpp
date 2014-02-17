@@ -9,6 +9,15 @@ to change settings.useHDMIForAudio to true.
 See http://elinux.org/RPiconfig for more details
 	
 hdmi_drive=2
+
+
+PINS: 
+phone 0: pin 2
+phone 1: pin 3
+phone 2: pin 0
+
+pins are based on the WiringPi pin layout on this page: 
+https://projects.drogon.net/raspberry-pi/wiringpi/pins/
 */
 
 
@@ -51,12 +60,18 @@ void testApp::reset(void)
 {
 	//re-load movie, bounce the pause to get to the first or second frame
 	ofLogVerbose() << "re-load and pause";
-	omxPlayer.loadMovie(ofToDataPath("noise_box_video.mp4", true));
+	omxPlayer.loadMovie(ofToDataPath(videoPath, true));
 	omxPlayer.setPaused(true);
 	omxPlayer.setPaused(false);
+	//make sure all LED channels are set to zero
+	for(int i = 0; i < 16 * numBoards; i ++)
+	{
+		pca->setLED(i, 0);
+	}
+	sleep(1);
 	omxPlayer.setPaused(true);
 
-	//drop all lights
+	
 
 }
 //--------------------------------------------------------------
@@ -87,10 +102,6 @@ void testApp::setup()
 	ramps[4].upFrame = 700;
 	ramps[4].downFrame = 900;
 
-	for(int i = 0; i < numRamps; i++)
-	{
-		ramps[i].bStartRamping = false;
-	}
 
 
 	//make sure all LED channels are set to zero
@@ -100,17 +111,22 @@ void testApp::setup()
 	}
 
 	
+	//set up phone pins
 	phone[0] = 2;
+	phone[1] = 3;
+	phone[2] = 0;
 	wiringPiSetup();
-	pinMode(phone[0], INPUT);
-	pullUpDnControl (phone[0], PUD_UP);
+	for(int i = 0; i < 3; i++){
+		pinMode(phone[i], INPUT);
+		pullUpDnControl (phone[i], PUD_UP);
+	}
 
 	consoleListener.setup(this);
 	ofHideCursor();
 	videoCounter = 0;
 	
 	//we can hardcode a different location for the video
-	string videoPath = ofToDataPath("Intro_HD720.mp4", true);
+	videoPath = ofToDataPath("Intro_HD720.mp4", true);
 
 	
 	//OR
@@ -146,8 +162,8 @@ void testApp::setup()
 	omxPlayer.setup(settings);
 
 	
-	//omxPlayer.setPaused(true);
-	doDrawInfo = true;
+	//omxPlayer.setPaused(true);w
+	doDrawInfo = false;
 
 	totalFrames = omxPlayer.getTotalNumFrames();
 	
@@ -157,7 +173,11 @@ void testApp::setup()
 void testApp::update(){
 	currentFrame = omxPlayer.getCurrentFrame()%totalFrames;
 	//pullUpDnControl (0, PUD_UP);
-	phoneState[0] = digitalRead(phone[0]);
+	for(int i = 0; i < 3; i++)
+	{
+		phoneState[i] = digitalRead(phone[i]);
+	
+	}
 	
 	
 
@@ -167,15 +187,20 @@ void testApp::update(){
 	//phoneState 1 = off hook, 0 = on hook
 	
 	//if any of the phones are off the hook, set isOffHook to true
-	if(phoneState[0]==1)
+	if(phoneState[0]==0 || phoneState[1]==0 || phoneState[2]==0 )
 	{
 		isOffHook = true;
 	}
 
 	//if all phones are on the hook, isOffHook is false
-	if(phoneState[0] == 0)
+	if(phoneState[0] == 1 && phoneState[1] == 1 && phoneState[2] == 1)	
 	{
 		isOffHook = false;
+		//make sure all LED channels are set to zero
+		for(int i = 0; i < 16 * numBoards; i ++)
+		{
+			pca->setLED(i, 0);
+		}
 	}
 
 	//if the video is paused, phone is on hook and then removed, play video
@@ -220,7 +245,9 @@ void testApp::draw()
 		info <<"\n" <<	"REMAINING FRAMES: "	<< totalFrames - currentFrame;
 		
 		info <<"\n" <<	"CURRENT VOLUME: "		<< omxPlayer.getVolume();
-		info <<"\n" <<  "PIN VALUE: "			<< phoneState[0];
+		info <<"\n" <<  "PIN2 VALUE: "			<< phoneState[0];
+		info <<"\n" <<  "PIN1 VALUE: "			<< phoneState[0];
+		info <<"\n" <<  "PIN1 VALUE: "			<< phoneState[0];
 		if(isOffHook)
 		{
 			info <<"\n" <<  "PHONE OFF HOOK"			;
