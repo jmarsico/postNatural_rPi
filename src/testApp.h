@@ -4,7 +4,7 @@
 #include "ofxOMXPlayer.h"
 #include "ConsoleListener.h"
 #include "PCA9685.h"
-//#include "ofxWiringPi.h"
+#include "ofxWiringPi.h"
 
 
 
@@ -47,6 +47,7 @@ class testApp : public ofBaseApp, public SSHKeyListener, public ofxOMXPlayerList
 
 	int currentFrame;
 	int totalFrames;
+	int mainCounter;
 
 	
 	bool isOffHook;

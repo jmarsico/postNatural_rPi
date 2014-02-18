@@ -70,6 +70,7 @@ void testApp::reset(void)
 	}
 	sleep(1);
 	omxPlayer.setPaused(true);
+	mainCounter = 0;
 
 	
 
@@ -150,7 +151,7 @@ void testApp::setup()
 	settings.videoPath = videoPath;
 	settings.useHDMIForAudio = false;		//default true
 	
-	//settings.enableTexture = false;		//default true, uncomment for direct-to-screen mode
+	settings.enableTexture = true;		//default true, uncomment for direct-to-screen mode
 	settings.enableLooping = true;
 	if (files.size()>0)
 	{
@@ -166,6 +167,8 @@ void testApp::setup()
 	doDrawInfo = false;
 
 	totalFrames = omxPlayer.getTotalNumFrames();
+
+	mainCounter = 0;
 	
 }
 
@@ -213,12 +216,47 @@ void testApp::update(){
 	if(!omxPlayer.isPaused() && prevIsOffHook && !isOffHook)
 	{
 		reset();
+		mainCounter = 0;
 	}
 
 	//set previous hook state to current hook state
 	prevIsOffHook = isOffHook;
 
-	
+	//if the player is not paused, increment the counter
+	if(omxPlayer.isPaused() == false)
+	{
+		mainCounter++;
+	}
+
+	//--------------------------------------------------------------
+	//----------------RAMPING CUES----------------------------------
+	//--------------------------------------------------------------
+
+	for(int i = 0; i < numRamps; i++)
+	{
+		//if the currentFrame is within 5 frames of the upFrame
+		if(mainCounter >=ramps[i].upFrame && mainCounter <= ramps[i].upFrame + (int)4095/fadeInc)
+		{
+			
+			int rampingVal =mainCounter - ramps[i].upFrame;
+			int val = rampingVal*fadeInc;
+
+			if(val > 4095) val = 4095;
+			pca->setLED(ramps[i].channel, val);
+			ofLog() << "channel: " << ramps[i].channel << " value: " << val;
+		}
+
+
+		if(mainCounter >=ramps[i].downFrame && mainCounter <= ramps[i].downFrame + (int)4095/fadeInc)
+		{
+			int rampingVal = mainCounter - ramps[i].downFrame;
+			int val = 4000 - rampingVal*fadeInc;	
+			if(val <= 0) val = 0;
+			pca->setLED(ramps[i].channel, val);
+			ofLog() << "channel: " << ramps[i].channel << " value: " << val;
+		}
+	}
+	ofLog() << "global Counter: " << mainCounter;
 }
 
 //--------------------------------------------------------------
@@ -248,55 +286,26 @@ void testApp::draw()
 		info <<"\n" <<  "PIN2 VALUE: "			<< phoneState[0];
 		info <<"\n" <<  "PIN1 VALUE: "			<< phoneState[0];
 		info <<"\n" <<  "PIN1 VALUE: "			<< phoneState[0];
+		info <<"\n" <<	"counter: "				<< mainCounter;
 		if(isOffHook)
 		{
 			info <<"\n" <<  "PHONE OFF HOOK"			;
 		}
 		if(!isOffHook)
 		{
-					info <<"\n" <<  "ALL PHONES ON HOOK"		;
+			info <<"\n" <<  "ALL PHONES ON HOOK"		;
 
 		}
 
 		info <<"\n" <<	"KEYS:";
 		info <<"\n" <<	"t to Toggle Info Display";
 		info <<"\n" <<	"p to Toggle Pause";
-		info <<"\n" <<	"b to Step frame forward";
-		info <<"\n" <<	"1 to Decrease Volume";
-		info <<"\n" <<	"2 to Increase Volume";
 		ofDrawBitmapStringHighlight(info.str(), 60, 60, ofColor(0, 0, 0, 90), ofColor::yellow);
 	}
 
 	
 
-	//--------------------------------------------------------------
-	//----------------RAMPING CUES----------------------------------
-	//--------------------------------------------------------------
-
-	for(int i = 0; i < numRamps; i++)
-	{
-		//if the currentFrame is within 5 frames of the upFrame
-		if(currentFrame >=ramps[i].upFrame && currentFrame <= ramps[i].upFrame + (int)4095/fadeInc)
-		{
-			
-			int rampingVal = currentFrame - ramps[i].upFrame;
-			int val = rampingVal*fadeInc;
-
-			if(val > 4095) val = 4095;
-			pca->setLED(ramps[i].channel, val);
-			ofLog() << "channel: " << ramps[i].channel << " value: " << val;
-		}
-
-
-		if(currentFrame >=ramps[i].downFrame && currentFrame <= ramps[i].downFrame + (int)4095/fadeInc)
-		{
-			int rampingVal = currentFrame - ramps[i].downFrame;
-			int val = 4000 - rampingVal*fadeInc;	
-			if(val <= 0) val = 0;
-			pca->setLED(ramps[i].channel, val);
-			ofLog() << "channel: " << ramps[i].channel << " value: " << val;
-		}
-	}
+	
 }
 
 
@@ -354,11 +363,7 @@ void testApp::keyPressed(int key){
 
 		case 'r':
 		{
-			ofLogVerbose() << "re-load and pause";
-			omxPlayer.loadMovie(ofToDataPath("noise_box_video.mp4", true));
-			omxPlayer.setPaused(true);
-			omxPlayer.setPaused(false);
-			omxPlayer.setPaused(true);
+			reset();
 			break;
 		}
 		
